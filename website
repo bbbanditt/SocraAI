@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socra AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+    body { margin: 0; background: #F8FAFC; color: #0F172A; }
+
+    .screen { display: none; }
+    .screen.active { display: flex; }
+
+    /* Nav */
+    .nav-btn {
+      padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+      color: #64748B; cursor: pointer; transition: all 0.15s;
+      border: 1px solid transparent; user-select: none;
+    }
+    .nav-btn:hover { background: #F1F5F9; color: #0F172A; }
+    .nav-btn.active { background: #F0FDFA; color: #0D9488; border-color: #99F6E4; }
+
+    /* Cards */
+    .card { background: white; border-radius: 12px; border: 1px solid #E2E8F0; }
+    .shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); }
+
+    /* Buttons */
+    .btn-primary {
+      background: #0D9488; color: white; border-radius: 8px;
+      padding: 9px 18px; font-size: 13px; font-weight: 500;
+      cursor: pointer; border: none; transition: background 0.15s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary:hover { background: #0F766E; }
+    .btn-primary:disabled { background: #94A3B8; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent; color: #64748B; border-radius: 8px;
+      padding: 9px 18px; font-size: 13px; font-weight: 500;
+      cursor: pointer; border: 1px solid #E2E8F0; transition: all 0.15s;
+    }
+    .btn-ghost:hover { background: #F8FAFC; color: #0F172A; }
+    .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Tutor screen specifics */
+    .socra-bubble {
+      border-left: 3px solid #0D9488;
+      background: #F0FDFA;
+      border-radius: 0 12px 12px 0;
+      padding: 18px 20px;
+    }
+    .student-bubble {
+      background: #F8FAFC;
+      border-radius: 12px;
+      padding: 14px 16px;
+      border: 1px solid #E2E8F0;
+    }
+    .hint-bubble {
+      border-left: 3px solid #F59E0B;
+      background: #FFFBEB;
+      border-radius: 0 10px 10px 0;
+      padding: 14px 16px;
+    }
+    .misconception-bubble {
+      border-left: 3px solid #F43F5E;
+      background: #FFF1F2;
+      border-radius: 0 10px 10px 0;
+      padding: 14px 16px;
+    }
+
+    .knowledge-tag {
+      display: inline-flex; align-items: center;
+      padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500;
+      background: #F0FDFA; color: #0D9488; border: 1px solid #99F6E4;
+      margin: 2px;
+    }
+    .knowledge-tag.dim {
+      background: #F8FAFC; color: #94A3B8; border-color: #E2E8F0;
+    }
+    .gap-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500;
+      background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A;
+      margin: 2px; cursor: pointer;
+    }
+
+    .step-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid #CBD5E1; background: white;
+      flex-shrink: 0; transition: all 0.35s ease;
+    }
+    .step-dot.done  { background: #0D9488; border-color: #0D9488; }
+    .step-dot.current { background: white; border-color: #0D9488; box-shadow: 0 0 0 3px #CCFBF1; }
+    .step-line { width: 2px; flex: 1; min-height: 18px; background: #E2E8F0; margin: 0 auto; transition: background 0.35s ease; }
+    .step-line.done { background: #0D9488; }
+
+    .confidence-ring-track { stroke: #E2E8F0; fill: none; stroke-width: 8; }
+    .confidence-ring-fill {
+      fill: none; stroke-width: 8; stroke: #0D9488; stroke-linecap: round;
+      transform: rotate(-90deg); transform-origin: 50% 50%;
+      transition: stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.28s ease forwards; }
+
+    @keyframes slideDown {
+      from { opacity: 0; max-height: 0; }
+      to   { opacity: 1; max-height: 300px; }
+    }
+
+    textarea.response-input {
+      width: 100%; min-height: 100px; resize: vertical;
+      border: 1px solid #E2E8F0; border-radius: 10px;
+      padding: 12px 14px; font-size: 14px; color: #0F172A;
+      line-height: 1.6; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+      font-family: 'Inter', sans-serif; background: white;
+    }
+    textarea.response-input:focus {
+      border-color: #0D9488;
+      box-shadow: 0 0 0 3px #CCFBF1;
+    }
+    textarea.response-input::placeholder { color: #94A3B8; }
+
+    .hint-dot { width: 11px; height: 11px; border-radius: 50%; background: #E2E8F0; border: 1.5px solid #CBD5E1; transition: all 0.3s; }
+    .hint-dot.used { background: #F59E0B; border-color: #F59E0B; }
+
+    .stat-mini { background: white; border-radius: 10px; border: 1px solid #E2E8F0; padding: 16px 20px; }
+
+    .subject-card {
+      background: white; border-radius: 12px; border: 1px solid #E2E8F0;
+      padding: 20px; cursor: pointer; transition: all 0.2s;
+    }
+    .subject-card:hover { border-color: #99F6E4; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+
+    .ring-track { stroke: #E2E8F0; fill: none; stroke-width: 5; }
+    .ring-fill { fill: none; stroke-width: 5; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; }
+
+    .heatmap-cell {
+      width: 26px; height: 26px; border-radius: 5px; cursor: pointer;
+      transition: transform 0.1s; display: block;
+    }
+    .heatmap-cell:hover { transform: scale(1.2); }
+
+    /* Drawer */
+    .drawer {
+      position: fixed; top: 0; right: -400px; width: 380px; height: 100vh;
+      background: white; border-left: 1px solid #E2E8F0;
+      box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+      transition: right 0.3s ease; z-index: 200; overflow-y: auto; padding: 24px;
+    }
+    .drawer.open { right: 0; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: none; z-index: 199; }
+    .overlay.open { display: block; }
+
+    .tag-pill {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    }
+
+    .sparkbar { display: inline-block; width: 6px; border-radius: 2px 2px 0 0; margin: 0 1px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ TOPNAV ═══════════ -->
+<nav style="background:white; border-bottom:1px solid #E2E8F0; position:sticky; top:0; z-index:50; height:52px; display:flex; align-items:center;">
+  <div style="max-width:1280px; margin:0 auto; padding:0 24px; width:100%; display:flex; align-items:center; justify-content:space-between;">
+    <div style="display:flex; align-items:center; gap:28px;">
+      <div style="display:flex; align-items:center; gap:8px; cursor:pointer;" onclick="goTo('home')">
+        <div style="width:28px; height:28px; background:#0D9488; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M7.5 1.5C5.3 1.5 3.5 3.3 3.5 5.5c0 1.5.8 2.8 2 3.5V10h4V9c1.2-.7 2-2 2-3.5 0-2.2-1.8-4-4-4z" fill="white" opacity="0.9"/>
+            <rect x="5" y="10.5" width="5" height="1.5" rx="0.7" fill="white" opacity="0.7"/>
+            <rect x="5.5" y="12.5" width="4" height="1" rx="0.5" fill="white" opacity="0.5"/>
+          </svg>
+        </div>
+        <span style="font-weight:700; font-size:15px; letter-spacing:-0.3px;">Socra AI</span>
+      </div>
+      <div style="display:flex; gap:2px;">
+        <div class="nav-btn active" id="nav-home"     onclick="goTo('home')">Student Home</div>
+        <div class="nav-btn"        id="nav-tutor"    onclick="goTo('tutor')">Tutor Session</div>
+        <div class="nav-btn"        id="nav-progress" onclick="goTo('progress')">My Progress</div>
+        <div class="nav-btn"        id="nav-teacher"  onclick="goTo('teacher')">Teacher View</div>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div style="width:28px; height:28px; background:#F0FDFA; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#0D9488; border:1px solid #99F6E4;">L</div>
+      <span style="font-size:13px; color:#64748B;">Lena M.</span>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCREEN 1 — STUDENT HOME
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen active flex-col" id="screen-home" style="min-height:calc(100vh - 52px);">
+  <div style="max-width:1100px; margin:0 auto; padding:40px 24px; width:100%;">
+
+    <div style="margin-bottom:32px;">
+      <h1 style="font-size:24px; font-weight:700; letter-spacing:-0.4px; margin:0 0 4px;">Good morning, Lena.</h1>
+      <p style="color:#64748B; font-size:15px; margin:0;">You have 3 active subjects and 1 session in progress.</p>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:28px;">
+      <div class="stat-mini shadow"><div style="font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:8px;">Sessions this week</div><div style="font-size:28px; font-weight:700;">4</div><div style="font-size:11px; color:#10B981; margin-top:3px;">↑ +2 vs last week</div></div>
+      <div class="stat-mini shadow"><div style="font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:8px;">Avg. confidence</div><div style="font-size:28px; font-weight:700;">64<span style="font-size:15px; color:#94A3B8; font-weight:400;">%</span></div><div style="font-size:11px; color:#10B981; margin-top:3px;">↑ +8% vs last week</div></div>
+      <div class="stat-mini shadow"><div style="font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:8px;">Topics near mastery</div><div style="font-size:28px; font-weight:700;">2</div><div style="font-size:11px; color:#64748B; margin-top:3px;">Quadratics · Newton's Laws</div></div>
+    </div>
+
+    <!-- Subject cards -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <h2 style="font-size:16px; font-weight:600; margin:0;">Active subjects</h2>
+      <span style="font-size:13px; color:#0D9488; cursor:pointer;">View all →</span>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:28px;">
+
+      <div class="subject-card shadow" onclick="goTo('tutor')">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+          <div><div style="font-size:11px; font-weight:500; color:#64748B; text-transform:uppercase; letter-spacing:0.5px;">Mathematics</div><div style="font-size:16px; font-weight:600; margin-top:2px;">Quadratic Functions</div></div>
+          <div style="background:#DCFCE7; color:#16A34A; font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; white-space:nowrap;">In progress</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" class="ring-track"/><circle cx="24" cy="24" r="18" class="ring-fill" stroke="#0D9488" stroke-dasharray="113" stroke-dashoffset="41"/></svg>
+          <div><div style="font-size:20px; font-weight:700;">64%</div><div style="font-size:11px; color:#64748B;">Building confidence</div></div>
+        </div>
+        <div style="font-size:12px; color:#64748B; margin-bottom:12px;">3 questions left in session</div>
+        <button class="btn-primary" style="width:100%; justify-content:center;">Resume session →</button>
+      </div>
+
+      <div class="subject-card shadow">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+          <div><div style="font-size:11px; font-weight:500; color:#64748B; text-transform:uppercase; letter-spacing:0.5px;">Biology</div><div style="font-size:16px; font-weight:600; margin-top:2px;">Photosynthesis</div></div>
+          <div style="background:#FEF3C7; color:#B45309; font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px;">1 gap found</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" class="ring-track"/><circle cx="24" cy="24" r="18" class="ring-fill" stroke="#F59E0B" stroke-dasharray="113" stroke-dashoffset="68"/></svg>
+          <div><div style="font-size:20px; font-weight:700;">40%</div><div style="font-size:11px; color:#B45309;">Developing</div></div>
+        </div>
+        <div style="font-size:12px; color:#64748B; margin-bottom:12px;">New session available</div>
+        <button class="btn-ghost" style="width:100%;">Start session</button>
+      </div>
+
+      <div class="subject-card shadow">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+          <div><div style="font-size:11px; font-weight:500; color:#64748B; text-transform:uppercase; letter-spacing:0.5px;">Physics</div><div style="font-size:16px; font-weight:600; margin-top:2px;">Newton's Laws</div></div>
+          <div style="background:#F0FDFA; color:#0D9488; font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px;">Near mastery</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+          <svg width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="18" class="ring-track"/><circle cx="24" cy="24" r="18" class="ring-fill" stroke="#10B981" stroke-dasharray="113" stroke-dashoffset="12"/></svg>
+          <div><div style="font-size:20px; font-weight:700;">89%</div><div style="font-size:11px; color:#10B981;">Near mastery</div></div>
+        </div>
+        <div style="font-size:12px; color:#64748B; margin-bottom:12px;">Final "teach it back" step</div>
+        <button class="btn-ghost" style="width:100%;">Complete mastery</button>
+      </div>
+    </div>
+
+    <!-- Bottom row -->
+    <div style="display:grid; grid-template-columns:2fr 1fr; gap:14px;">
+      <div class="card shadow" style="padding:22px;">
+        <div style="font-size:15px; font-weight:600; margin-bottom:14px;">Recent reasoning moments</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="padding:12px; background:#F8FAFC; border-radius:8px;">
+            <div style="font-size:11px; color:#64748B; margin-bottom:3px;">Quadratic Functions · 2 hours ago</div>
+            <div style="font-size:13px; color:#0F172A; line-height:1.5;">"When 'a' is negative, the parabola opens downward because the leading term dominates and becomes increasingly negative..."</div>
+            <div style="margin-top:7px;"><span class="tag-pill" style="background:#DCFCE7; color:#16A34A;">Correct reasoning ✓</span></div>
+          </div>
+          <div style="padding:12px; background:#F8FAFC; border-radius:8px;">
+            <div style="font-size:11px; color:#64748B; margin-bottom:3px;">Photosynthesis · Yesterday</div>
+            <div style="font-size:13px; color:#0F172A; line-height:1.5;">"I think chlorophyll absorbs all colors of light equally to produce energy..."</div>
+            <div style="margin-top:7px;"><span class="tag-pill" style="background:#FEF3C7; color:#B45309;">Misconception flagged ⚠</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow" style="padding:22px;">
+        <div style="font-size:15px; font-weight:600; margin-bottom:14px;">Up next</div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; align-items:center; gap:10px; padding:11px; background:#F0FDFA; border-radius:8px; cursor:pointer;" onclick="goTo('tutor')">
+            <div style="width:7px; height:7px; background:#0D9488; border-radius:50%; flex-shrink:0; animation: pulse 2s infinite;"></div>
+            <div><div style="font-size:13px; font-weight:500;">Resume Quadratics</div><div style="font-size:11px; color:#64748B;">Step 3 of 5 · ~10 min</div></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:11px; background:#F8FAFC; border-radius:8px; cursor:pointer;">
+            <div style="width:7px; height:7px; background:#E2E8F0; border-radius:50%; flex-shrink:0;"></div>
+            <div><div style="font-size:13px; font-weight:500;">Photosynthesis gap</div><div style="font-size:11px; color:#64748B;">Chlorophyll absorption</div></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; padding:11px; background:#F8FAFC; border-radius:8px; cursor:pointer;">
+            <div style="width:7px; height:7px; background:#E2E8F0; border-radius:50%; flex-shrink:0;"></div>
+            <div><div style="font-size:13px; font-weight:500;">Newton's Laws — final</div><div style="font-size:11px; color:#64748B;">Teach it back · ~5 min</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCREEN 2 — TUTOR INTERACTION (hero screen)
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-tutor" style="height:calc(100vh - 52px); overflow:hidden; flex-direction:column;">
+
+  <!-- Session sub-header -->
+  <div style="background:white; border-bottom:1px solid #E2E8F0; height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; flex-shrink:0;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span style="font-size:13px; color:#64748B;">Mathematics</span>
+      <span style="color:#CBD5E1;">›</span>
+      <span style="font-size:13px; font-weight:600;">Quadratic Functions</span>
+      <span style="background:#F0FDFA; color:#0D9488; font-size:11px; font-weight:500; padding:1px 9px; border-radius:20px; border:1px solid #99F6E4;">Session 3</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span style="font-size:12px; color:#64748B; display:flex; align-items:center; gap:4px;" id="timer-display">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#94A3B8" stroke-width="1.5"/><path d="M6 3v3l2 1" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg>
+        0:00
+      </span>
+      <button class="btn-ghost" style="padding:4px 12px; font-size:12px;" onclick="goTo('home')">End session</button>
+    </div>
+  </div>
+
+  <!-- 3-column grid -->
+  <div style="display:grid; grid-template-columns:210px 1fr 265px; flex:1; overflow:hidden;">
+
+    <!-- ── LEFT: Your Mind ── -->
+    <div style="background:#F8FAFC; border-right:1px solid #E2E8F0; overflow-y:auto; padding:18px 14px;">
+      <div style="font-size:10px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:14px;">Your Mind</div>
+
+      <div style="margin-bottom:18px;">
+        <div style="font-size:11px; font-weight:600; color:#475569; margin-bottom:7px;">What you know</div>
+        <div id="knowledge-tags">
+          <span class="knowledge-tag">y = mx + b</span>
+          <span class="knowledge-tag">parabola opens ↑</span>
+          <span class="knowledge-tag dim">discriminant</span>
+          <span class="knowledge-tag">x-intercepts</span>
+          <span class="knowledge-tag dim">complex roots</span>
+          <span class="knowledge-tag">vertex formula</span>
+        </div>
+        <div style="font-size:10px; color:#94A3B8; margin-top:6px;">Teal = confirmed this session</div>
+      </div>
+
+      <div style="border-top:1px solid #E2E8F0; margin:14px 0;"></div>
+
+      <div style="margin-bottom:18px;">
+        <div style="font-size:11px; font-weight:600; color:#475569; margin-bottom:7px;">Your hypothesis</div>
+        <div style="background:white; border:1px solid #E2E8F0; border-radius:8px; padding:9px 11px;" id="hypothesis-box">
+          <div style="font-size:12px; color:#0F172A; line-height:1.5;" id="hypothesis-text">"When a &gt; 0 the parabola opens up, so negative a probably flips it downward."</div>
+          <div style="font-size:10px; color:#94A3B8; margin-top:5px;" id="hypothesis-time">Updated 3 min ago</div>
+        </div>
+        <button style="font-size:11px; color:#0D9488; background:none; border:none; cursor:pointer; margin-top:5px; padding:0;" onclick="reviseHypothesis()">Revise →</button>
+      </div>
+
+      <div style="border-top:1px solid #E2E8F0; margin:14px 0;"></div>
+
+      <div>
+        <div style="font-size:11px; font-weight:600; color:#475569; margin-bottom:7px;">Knowledge gaps</div>
+        <div id="gap-tags">
+          <span class="gap-tag">⚠ function notation</span>
+          <span class="gap-tag">⚠ completing square</span>
+        </div>
+        <div style="font-size:10px; color:#94A3B8; margin-top:6px;">Detected from your responses.</div>
+      </div>
+    </div>
+
+    <!-- ── CENTER: Guided Discovery ── -->
+    <div style="overflow-y:auto; padding:26px 28px; display:flex; flex-direction:column; gap:0;" id="conversation-feed">
+      <!-- Conversation turns rendered by JS -->
+    </div>
+
+    <!-- ── RIGHT: Your Path ── -->
+    <div style="background:white; border-left:1px solid #E2E8F0; overflow-y:auto; padding:18px 16px;">
+      <div style="font-size:10px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:14px;">Your Path</div>
+
+      <!-- Goal -->
+      <div style="background:#F8FAFC; border-radius:9px; padding:12px 13px; margin-bottom:18px; border:1px solid #E2E8F0;">
+        <div style="font-size:10px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">Session goal</div>
+        <div style="font-size:12px; color:#0F172A; line-height:1.5;">Understand how coefficient 'a' in f(x) = ax² controls the parabola's shape and direction.</div>
+      </div>
+
+      <!-- Reasoning steps -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px; font-weight:600; color:#475569; margin-bottom:12px;">Reasoning path</div>
+        <div style="display:flex; flex-direction:column;" id="step-list">
+          <!-- Built by JS -->
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #E2E8F0; margin:14px 0;"></div>
+
+      <!-- Confidence ring -->
+      <div style="margin-bottom:18px;">
+        <div style="font-size:11px; font-weight:600; color:#475569; margin-bottom:10px;">Confidence</div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <svg width="60" height="60" viewBox="0 0 60 60">
+            <circle cx="30" cy="30" r="24" class="confidence-ring-track"/>
+            <circle cx="30" cy="30" r="24" class="confidence-ring-fill" id="conf-ring" stroke-dasharray="151" stroke-dashoffset="55"/>
+          </svg>
+          <div>
+            <div style="font-size:22px; font-weight:700;" id="conf-pct">64%</div>
+            <div style="font-size:11px; color:#0D9488;" id="conf-label">Building</div>
+          </div>
+        </div>
+        <div style="height:3px; background:#E2E8F0; border-radius:2px; margin-top:10px;">
+          <div style="height:3px; background:#0D9488; border-radius:2px; transition:width 0.9s ease;" id="conf-bar" style="width:64%;"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:9px; color:#CBD5E1; margin-top:3px;">
+          <span>Starting</span><span>Building</span><span>Mastered</span>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #E2E8F0; margin:14px 0;"></div>
+
+      <!-- Hints used -->
+      <div>
+        <div style="font-size:11px; font-weight:600; color:#475569; margin-bottom:8px;">Hints used this session</div>
+        <div style="display:flex; gap:7px; align-items:center; margin-bottom:5px;">
+          <div class="hint-dot" id="hdot-1"></div>
+          <div class="hint-dot" id="hdot-2"></div>
+          <div class="hint-dot" id="hdot-3"></div>
+          <span style="font-size:11px; color:#94A3B8; margin-left:3px;" id="hdot-label">0 of 3</span>
+        </div>
+        <div style="font-size:10px; color:#94A3B8;">Fewer hints = stronger signal to teacher</div>
+      </div>
+    </div>
+
+  </div><!-- end 3-col -->
+</div><!-- end tutor screen -->
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCREEN 3 — PROGRESS
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen flex-col" id="screen-progress" style="min-height:calc(100vh - 52px);">
+  <div style="max-width:960px; margin:0 auto; padding:40px 24px; width:100%;">
+    <h1 style="font-size:24px; font-weight:700; letter-spacing:-0.4px; margin:0 0 4px;">My Progress</h1>
+    <p style="color:#64748B; margin:0 0 28px;">Confidence and reasoning quality across all subjects.</p>
+
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:28px;">
+      <div class="card shadow" style="padding:20px;">
+        <div style="font-size:12px; color:#64748B; margin-bottom:10px; font-weight:500;">Quadratic Functions</div>
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
+          <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="20" stroke="#E2E8F0" fill="none" stroke-width="6"/><circle cx="26" cy="26" r="20" stroke="#0D9488" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="126" stroke-dashoffset="45" transform="rotate(-90 26 26)"/></svg>
+          <div><div style="font-size:22px; font-weight:700;">64%</div><div style="font-size:11px; color:#0D9488;">Building</div></div>
+        </div>
+        <div style="font-size:11px; color:#64748B; margin-bottom:6px;">3 sessions · 12 questions</div>
+        <div><span class="tag-pill" style="background:#F0FDFA; color:#0D9488;">Vertex ✓</span> <span class="tag-pill" style="background:#FEF3C7; color:#B45309;">Direction ⚠</span></div>
+      </div>
+      <div class="card shadow" style="padding:20px;">
+        <div style="font-size:12px; color:#64748B; margin-bottom:10px; font-weight:500;">Photosynthesis</div>
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
+          <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="20" stroke="#E2E8F0" fill="none" stroke-width="6"/><circle cx="26" cy="26" r="20" stroke="#F59E0B" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="126" stroke-dashoffset="76" transform="rotate(-90 26 26)"/></svg>
+          <div><div style="font-size:22px; font-weight:700;">40%</div><div style="font-size:11px; color:#B45309;">Developing</div></div>
+        </div>
+        <div style="font-size:11px; color:#64748B; margin-bottom:6px;">2 sessions · 8 questions</div>
+        <div><span class="tag-pill" style="background:#FFF1F2; color:#F43F5E;">Misconception ✗</span></div>
+      </div>
+      <div class="card shadow" style="padding:20px;">
+        <div style="font-size:12px; color:#64748B; margin-bottom:10px; font-weight:500;">Newton's Laws</div>
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:10px;">
+          <svg width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="20" stroke="#E2E8F0" fill="none" stroke-width="6"/><circle cx="26" cy="26" r="20" stroke="#10B981" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="126" stroke-dashoffset="14" transform="rotate(-90 26 26)"/></svg>
+          <div><div style="font-size:22px; font-weight:700;">89%</div><div style="font-size:11px; color:#10B981;">Near mastery</div></div>
+        </div>
+        <div style="font-size:11px; color:#64748B; margin-bottom:6px;">5 sessions · 21 questions</div>
+        <div><span class="tag-pill" style="background:#DCFCE7; color:#16A34A;">Forces ✓</span> <span class="tag-pill" style="background:#DCFCE7; color:#16A34A;">Inertia ✓</span></div>
+      </div>
+    </div>
+
+    <div class="card shadow" style="padding:24px;">
+      <div style="font-size:15px; font-weight:600; margin-bottom:18px;">Confidence over time — Quadratic Functions</div>
+      <div style="display:flex; align-items:flex-end; gap:10px; height:80px; padding-bottom:4px;">
+        <div style="display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; height:80px;"><div style="background:#0D9488; border-radius:4px 4px 0 0; width:36px; height:25px;"></div><span style="font-size:10px; color:#94A3B8;">S1</span></div>
+        <div style="display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; height:80px;"><div style="background:#0D9488; border-radius:4px 4px 0 0; width:36px; height:38px;"></div><span style="font-size:10px; color:#94A3B8;">S2</span></div>
+        <div style="display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; height:80px;"><div style="background:#0D9488; border-radius:4px 4px 0 0; width:36px; height:51px;"></div><span style="font-size:10px; color:#94A3B8;">S3 →</span></div>
+        <div style="display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; height:80px; opacity:0.35;"><div style="background:#0D9488; border-radius:4px 4px 0 0; width:36px; height:64px; border:2px dashed #0D9488; background:transparent;"></div><span style="font-size:10px; color:#0D9488; font-weight:500;">S4</span></div>
+      </div>
+      <div style="font-size:11px; color:#94A3B8; margin-top:8px;">Each bar = one session. Dashed = projected if current session completes.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCREEN 4 — TEACHER DASHBOARD (skeleton)
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen flex-col" id="screen-teacher" style="min-height:calc(100vh - 52px);">
+  <div style="max-width:1200px; margin:0 auto; padding:32px 24px; width:100%;">
+
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:26px;">
+      <div>
+        <div style="font-size:11px; color:#64748B; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Teacher view</div>
+        <h1 style="font-size:22px; font-weight:700; letter-spacing:-0.3px; margin:0;">Ms. Johnson — Biology 10B</h1>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-ghost" style="padding:7px 14px; font-size:13px;">Week of Apr 14 ▾</button>
+        <button class="btn-ghost" style="padding:7px 14px; font-size:13px;">Export</button>
+        <button class="btn-primary" style="padding:7px 14px; font-size:13px;">+ New session</button>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px;">
+      <div class="stat-mini shadow"><div style="font-size:10px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:7px;">Active this week</div><div style="font-size:26px; font-weight:700;">23<span style="font-size:13px; color:#94A3B8; font-weight:400;"> / 28</span></div><div style="font-size:11px; color:#10B981; margin-top:3px;">↑ +3 vs last week</div></div>
+      <div class="stat-mini shadow"><div style="font-size:10px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:7px;">Avg. confidence</div><div style="font-size:26px; font-weight:700;">64<span style="font-size:13px; color:#94A3B8; font-weight:400;">%</span></div><div style="font-size:11px; color:#10B981; margin-top:3px;">↑ +8% vs last week</div></div>
+      <div class="stat-mini shadow"><div style="font-size:10px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:7px;">Misconceptions</div><div style="font-size:26px; font-weight:700; color:#F43F5E;">3</div><div style="font-size:11px; color:#64748B; margin-top:3px;">Across 2 topics</div></div>
+      <div class="stat-mini shadow" style="border-color:#FECACA; background:#FFF5F5;"><div style="font-size:10px; font-weight:600; color:#B91C1C; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:7px;">Needs attention</div><div style="font-size:26px; font-weight:700; color:#F43F5E;">4</div><div style="font-size:11px; color:#B91C1C; margin-top:3px;">Stuck &gt;2 sessions</div></div>
+    </div>
+
+    <!-- Main grid -->
+    <div style="display:grid; grid-template-columns:1fr 360px; gap:14px; margin-bottom:14px;">
+
+      <!-- Heatmap -->
+      <div class="card shadow" style="padding:22px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+          <div><div style="font-size:15px; font-weight:600;">Topic mastery by student</div><div style="font-size:12px; color:#64748B; margin-top:1px;">Click any cell to open student detail</div></div>
+          <div style="display:flex; gap:10px; font-size:11px; color:#64748B; align-items:center;">
+            <span style="display:flex; align-items:center; gap:3px;"><div style="width:9px;height:9px;border-radius:2px;background:#10B981;"></div> Mastered</span>
+            <span style="display:flex; align-items:center; gap:3px;"><div style="width:9px;height:9px;border-radius:2px;background:#F59E0B;"></div> Developing</span>
+            <span style="display:flex; align-items:center; gap:3px;"><div style="width:9px;height:9px;border-radius:2px;background:#F43F5E;"></div> Misconception</span>
+          </div>
+        </div>
+        <div style="overflow-x:auto;" id="heatmap-container"></div>
+        <div style="font-size:11px; color:#94A3B8; margin-top:8px;">Red = misconception detected, not just low confidence</div>
+      </div>
+
+      <!-- Right col -->
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="card shadow" style="padding:18px;">
+          <div style="font-size:14px; font-weight:600; margin-bottom:12px;">Common misconceptions</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:12px; font-weight:500;">"Photosynthesis only in leaves"</span><span style="font-size:11px; color:#F43F5E; font-weight:600; cursor:pointer;" onclick="openDrawer()">8 →</span></div>
+              <div style="height:5px; background:#FEE2E2; border-radius:3px;"><div style="height:5px; background:#F43F5E; border-radius:3px; width:57%;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:12px; font-weight:500;">"ATP = stored energy only"</span><span style="font-size:11px; color:#F59E0B; font-weight:600; cursor:pointer;">5 →</span></div>
+              <div style="height:5px; background:#FEF3C7; border-radius:3px;"><div style="height:5px; background:#F59E0B; border-radius:3px; width:36%;"></div></div>
+            </div>
+            <div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:12px; font-weight:500;">"Mitosis produces 4 cells"</span><span style="font-size:11px; color:#94A3B8; font-weight:600; cursor:pointer;">3 →</span></div>
+              <div style="height:5px; background:#F1F5F9; border-radius:3px;"><div style="height:5px; background:#CBD5E1; border-radius:3px; width:21%;"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow" style="padding:18px;">
+          <div style="font-size:14px; font-weight:600; margin-bottom:12px;">Alerts</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="padding:11px; background:#FFF1F2; border-radius:8px; border:1px solid #FECDD3; cursor:pointer;" onclick="openDrawer()">
+              <div style="font-size:12px; font-weight:600; color:#F43F5E; margin-bottom:2px;">Omar K.</div>
+              <div style="font-size:11px; color:#0F172A; line-height:1.4;">Stuck on Cell Division 3 sessions. 0 hints used — possible avoidance.</div>
+              <div style="font-size:11px; color:#F43F5E; margin-top:5px;">→ Suggest 1:1 check-in</div>
+            </div>
+            <div style="padding:11px; background:#FFFBEB; border-radius:8px; border:1px solid #FDE68A;">
+              <div style="font-size:12px; font-weight:600; color:#B45309; margin-bottom:2px;">Eva M.</div>
+              <div style="font-size:11px; color:#0F172A; line-height:1.4;">Confidence dropped 15% on Photosynthesis this week.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interventions -->
+    <div class="card shadow" style="padding:22px;">
+      <div style="font-size:15px; font-weight:600; margin-bottom:14px;">Intervention suggestions</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div style="padding:14px; background:#FFF7F0; border-radius:9px; border:1px solid #FDBA74;">
+          <div style="font-size:12px; font-weight:600; color:#9A3412; margin-bottom:6px;">5 students confused about ATP</div>
+          <p style="font-size:12px; color:#0F172A; line-height:1.5; margin:0 0 8px;">Consider a small-group session using the "currency" analogy before Thursday's assessment.</p>
+          <span style="font-size:11px; color:#EA580C; background:white; border-radius:5px; padding:4px 9px; border:1px solid #FDBA74; cursor:pointer;">Suggested activity: ATP card sort — 15 min →</span>
+        </div>
+        <div style="padding:14px; background:#EFF6FF; border-radius:9px; border:1px solid #BFDBFE;">
+          <div style="font-size:12px; font-weight:600; color:#1E3A8A; margin-bottom:6px;">7 students inactive since Monday</div>
+          <p style="font-size:12px; color:#0F172A; line-height:1.5; margin:0 0 8px;">A short warm-up session before class may help re-engage them before Friday.</p>
+          <span style="font-size:11px; color:#2563EB; background:white; border-radius:5px; padding:4px 9px; border:1px solid #BFDBFE; cursor:pointer;">Send session reminder →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer overlay -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="student-drawer">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+    <div style="font-size:16px; font-weight:700;">Omar K. — Detail</div>
+    <button onclick="closeDrawer()" style="background:none; border:none; color:#64748B; cursor:pointer; font-size:18px; line-height:1;">×</button>
+  </div>
+  <div style="display:flex; align-items:center; gap:10px; padding:14px; background:#F8FAFC; border-radius:9px; margin-bottom:18px;">
+    <div style="width:38px; height:38px; background:#F0FDFA; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:#0D9488; flex-shrink:0;">O</div>
+    <div><div style="font-size:14px; font-weight:600;">Omar K.</div><div style="font-size:12px; color:#64748B;">Biology 10B · 3 sessions this week</div></div>
+  </div>
+  <div style="margin-bottom:18px;">
+    <div style="font-size:11px; font-weight:600; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:9px;">Confidence by topic</div>
+    <div style="display:flex; flex-direction:column; gap:9px;">
+      <div><div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:12px;">Cell Division</span><span style="font-size:12px; color:#F43F5E; font-weight:600;">28%</span></div><div style="height:4px; background:#FEE2E2; border-radius:2px;"><div style="height:4px; background:#F43F5E; border-radius:2px; width:28%;"></div></div></div>
+      <div><div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:12px;">Photosynthesis</span><span style="font-size:12px; color:#F59E0B; font-weight:600;">45%</span></div><div style="height:4px; background:#FEF3C7; border-radius:2px;"><div style="height:4px; background:#F59E0B; border-radius:2px; width:45%;"></div></div></div>
+      <div><div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="font-size:12px;">DNA Structure</span><span style="font-size:12px; color:#10B981; font-weight:600;">72%</span></div><div style="height:4px; background:#DCFCE7; border-radius:2px;"><div style="height:4px; background:#10B981; border-radius:2px; width:72%;"></div></div></div>
+    </div>
+  </div>
+  <div style="padding:12px; background:#FFF1F2; border-radius:9px; border:1px solid #FECDD3; margin-bottom:18px;">
+    <div style="font-size:11px; font-weight:600; color:#F43F5E; margin-bottom:5px;">Last session summary</div>
+    <p style="font-size:12px; color:#0F172A; line-height:1.5; margin:0;">Omar asked 4 questions, used 0 hints (3rd session in a row). Shows understanding of mitosis phases but confused about triggers. Possible help-avoidance pattern.</p>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button class="btn-ghost" style="flex:1; justify-content:center; padding:8px;">Send note</button>
+    <button class="btn-primary" style="flex:1; justify-content:center; padding:8px;">Flag for review</button>
+  </div>
+</div>
+
+
+<script>
+// ─────────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────────
+function goTo(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'tutor') startTimer();
+}
+
+// ─────────────────────────────────────────────────
+// SESSION TIMER
+// ─────────────────────────────────────────────────
+let timerInterval = null;
+let elapsed = 0;
+function startTimer() {
+  if (timerInterval) return;
+  timerInterval = setInterval(() => {
+    elapsed++;
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    document.getElementById('timer-display').innerHTML =
+      `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#94A3B8" stroke-width="1.5"/><path d="M6 3v3l2 1" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/></svg> ${m}:${String(s).padStart(2,'0')}`;
+  }, 1000);
+}
+
+// ─────────────────────────────────────────────────
+// CONVERSATION ENGINE
+// ─────────────────────────────────────────────────
+const STEPS = [
+  { label: 'Recall parabola basics',  state: 'done' },
+  { label: "Identify role of 'a'",    state: 'done' },
+  { label: "Connect 'a' to shape",    state: 'current' },
+  { label: 'Apply to new example',    state: 'upcoming' },
+  { label: 'Teach it back',           state: 'upcoming' },
+];
+
+const TURNS = [
+  {
+    type: 'clarifying',
+    question: `"You mentioned the parabola might flip. What specifically about the value of 'a' do you think controls <em>which direction</em> it opens — and what's your evidence for that?"`,
+    why: `Socra is asking this because your hypothesis is directionally right, but needs grounding. Understanding <em>why</em> 'a' determines direction — not just that it does — is what builds transferable knowledge.`,
+    confAfter: 71,
+    confLabel: 'Building',
+    stepAdvance: null,   // no step advance on this turn
+    newTag: null,
+  },
+  {
+    type: 'connection',
+    question: `"Good reasoning. Now — without graphing, what would <em>f(x) = −2x²</em> look like compared to <em>f(x) = 2x²</em>? Describe the shape, direction, and how 'steep' it is."`,
+    why: `Applying the concept to a concrete example tests whether the understanding is real or just surface-level. The −2 coefficient introduces both direction and stretch — two variables to reason about simultaneously.`,
+    confAfter: 79,
+    confLabel: 'Building',
+    stepAdvance: 2,     // step index to advance to 'done' (Connect 'a' to shape)
+    newTag: 'direction of opening',
+  },
+  {
+    type: 'challenge',
+    question: `"Exactly right. Final step: explain in plain language, to someone who has never seen a parabola, what the sign and size of 'a' tells you about the shape. Start from scratch."`,
+    why: `This is the Feynman test — if you can explain it simply, you've understood it deeply. Vague or jargon-heavy explanations reveal gaps that feel like mastery but aren't.`,
+    confAfter: 89,
+    confLabel: 'Near mastery',
+    stepAdvance: 3,     // Apply to new example
+    newTag: 'coefficient stretch',
+  },
+  {
+    type: 'reflection',
+    question: `"Excellent. You've demonstrated real understanding here. Take a moment — what was the hardest part of this topic for you, and how did your thinking shift?"`,
+    why: `Metacognitive reflection cements learning. Students who can identify their own confusion points retain concepts significantly longer.`,
+    confAfter: 92,
+    confLabel: 'Near mastery',
+    stepAdvance: 4,     // Teach it back
+    newTag: null,
+  },
+];
+
+const CARD_LABELS = {
+  clarifying:  'Clarifying question',
+  connection:  'Connection prompt',
+  challenge:   'Challenge',
+  reflection:  'Reflection',
+};
+
+const CARD_BADGE_COLORS = {
+  clarifying:  '#0D9488',
+  connection:  '#6366F1',
+  challenge:   '#F43F5E',
+  reflection:  '#8B5CF6',
+};
+
+let turnIndex = 0;
+let hintCount = 0;
+let hintsThisTurn = 0;
+const HINTS = [
+  [
+    { level: 'Directional', text: "Think about what the sign of 'a' changes geometrically. If 'a' is positive, the arms go up. What would a negative 'a' do to those arms?" },
+    { level: 'Structural',  text: "Imagine the parabola as a cup. When a > 0, it holds water. When a < 0, what happens to the cup's orientation?" },
+    { level: 'Near answer', text: "The vertex stays determined by the formula. What changes is <em>which direction</em> it opens. Can you now state a rule about 'a' and direction?" },
+  ],
+  [
+    { level: 'Directional', text: "Focus on the sign first, then the number. If −2x² opens down, what does the 2 change compared to −x²?" },
+    { level: 'Structural',  text: "Larger |a| means the parabola is 'steeper' or 'narrower'. Smaller |a| means 'wider'. Does f(x) = −2x² look more stretched or compressed than f(x) = −x²?" },
+    { level: 'Near answer', text: "f(x) = −2x²: opens downward (negative), steeper than f(x) = −x² (multiplier 2). Can you describe both properties now?" },
+  ],
+  [
+    { level: 'Directional', text: "Start with: 'The sign of a tells you…' then: 'The size of a tells you…'" },
+    { level: 'Structural',  text: "Think of 'a' as two separate controls: a switch (positive/negative) and a dial (how big). Describe each control." },
+    { level: 'Near answer', text: "Sign → direction. Size → how narrow/wide. Positive a → cup shape. Negative a → dome shape. Now put this in one plain sentence." },
+  ],
+  [],
+];
+
+// Build step list
+function buildSteps() {
+  const list = document.getElementById('step-list');
+  list.innerHTML = '';
+  STEPS.forEach((step, i) => {
+    const isLast = i === STEPS.length - 1;
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex; gap:9px; align-items:flex-start;';
+
+    const col = document.createElement('div');
+    col.style.cssText = 'display:flex; flex-direction:column; align-items:center;';
+
+    const dot = document.createElement('div');
+    dot.id = 'step-dot-' + i;
+    dot.className = 'step-dot ' + (step.state === 'done' ? 'done' : step.state === 'current' ? 'current' : '');
+    dot.style.marginTop = '2px';
+    col.appendChild(dot);
+
+    if (!isLast) {
+      const line = document.createElement('div');
+      line.id = 'step-line-' + i;
+      line.className = 'step-line ' + (step.state === 'done' ? 'done' : '');
+      col.appendChild(line);
+    }
+
+    const text = document.createElement('div');
+    text.style.paddingBottom = isLast ? '0' : '16px';
+    const label = document.createElement('div');
+    label.id = 'step-label-' + i;
+    label.style.cssText = 'font-size:12px; font-weight:500; color:' + (step.state === 'done' ? '#0D9488' : step.state === 'current' ? '#0F172A' : '#94A3B8') + ';';
+    label.textContent = step.label;
+    const sub = document.createElement('div');
+    sub.id = 'step-sub-' + i;
+    sub.style.cssText = 'font-size:10px; margin-top:1px; color:' + (step.state === 'done' ? '#94A3B8' : step.state === 'current' ? '#0D9488' : '#CBD5E1') + ';';
+    sub.textContent = step.state === 'done' ? 'Demonstrated ✓' : step.state === 'current' ? 'Current step' : 'Upcoming';
+    text.appendChild(label);
+    text.appendChild(sub);
+
+    wrapper.appendChild(col);
+    wrapper.appendChild(text);
+    list.appendChild(wrapper);
+  });
+}
+
+// Render first question
+function initConversation() {
+  buildSteps();
+  renderSocraCard(turnIndex);
+  updateConfidence(64, 'Building');
+}
+
+function renderSocraCard(idx) {
+  const turn = TURNS[idx];
+  const feed = document.getElementById('conversation-feed');
+
+  // Header label for this turn
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:14px;';
+  header.innerHTML = `
+    <span style="font-size:10px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.7px;">Guided Discovery</span>
+    <span style="font-size:10px; background:#F0FDFA; color:#0D9488; padding:2px 8px; border-radius:20px; border:1px solid #99F6E4;">Step ${turnIndex + 3} of 5</span>
+  `;
+  feed.appendChild(header);
+
+  // Socra question card
+  const card = document.createElement('div');
+  card.className = 'socra-bubble fade-up';
+  card.style.marginBottom = '16px';
+  card.innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+      <span style="font-size:10px; font-weight:700; color:${CARD_BADGE_COLORS[turn.type]}; text-transform:uppercase; letter-spacing:0.5px;">${CARD_LABELS[turn.type]}</span>
+      <button onclick="toggleWhy(this)" style="font-size:11px; color:#64748B; background:none; border:none; cursor:pointer;">Why Socra asks ▾</button>
+    </div>
+    <p style="font-size:16px; font-weight:500; color:#0F172A; line-height:1.65; margin:0;">${turn.question}</p>
+    <div class="why-block" style="display:none; margin-top:10px; padding:9px 12px; background:white; border-radius:7px; border:1px solid #99F6E4; font-size:12px; color:#0F172A; line-height:1.6;">${turn.why}</div>
+  `;
+  feed.appendChild(card);
+
+  // Response area
+  const responseBlock = document.createElement('div');
+  responseBlock.id = 'response-block-' + idx;
+  responseBlock.className = 'fade-up';
+  responseBlock.style.marginBottom = '14px';
+  responseBlock.innerHTML = `
+    <div style="font-size:11px; font-weight:600; color:#475569; margin-bottom:8px;">Your thinking</div>
+    <textarea class="response-input" id="ta-${idx}" placeholder="Type out your thinking — there's no wrong answer here, only clearer thinking…"></textarea>
+    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center;">
+      <button class="btn-primary" onclick="submitTurn(${idx})">Send my thinking →</button>
+      <button class="btn-ghost" onclick="showStuck(${idx})">I don't know where to start</button>
+    </div>
+  `;
+  feed.appendChild(responseBlock);
+
+  // Hint section
+  const hints = HINTS[idx];
+  if (hints && hints.length > 0) {
+    const hintSection = document.createElement('div');
+    hintSection.id = 'hint-section-' + idx;
+    hintSection.style.marginBottom = '8px';
+    hintSection.innerHTML = `
+      <div style="border-top:1px solid #E2E8F0; padding-top:12px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+        <span style="font-size:12px; color:#64748B;">Need a nudge?</span>
+        <button class="btn-ghost" id="hint-btn-${idx}" onclick="revealHint(${idx})" style="padding:5px 12px; font-size:12px;">Show hint 1 of ${hints.length}</button>
+      </div>
+      <div id="hints-${idx}"></div>
+    `;
+    feed.appendChild(hintSection);
+  }
+
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function toggleWhy(btn) {
+  const block = btn.closest('.socra-bubble').querySelector('.why-block');
+  block.style.display = block.style.display === 'none' ? 'block' : 'none';
+}
+
+let hintsRevealedPerTurn = {};
+
+function revealHint(turnIdx) {
+  if (!hintsRevealedPerTurn[turnIdx]) hintsRevealedPerTurn[turnIdx] = 0;
+  const hints = HINTS[turnIdx];
+  const already = hintsRevealedPerTurn[turnIdx];
+  if (already >= hints.length) return;
+
+  hintsRevealedPerTurn[turnIdx]++;
+  hintCount++;
+
+  const hint = hints[already];
+  const container = document.getElementById('hints-' + turnIdx);
+  const el = document.createElement('div');
+  el.className = 'hint-bubble fade-up';
+  el.style.marginBottom = '8px';
+  el.innerHTML = `
+    <div style="font-size:10px; font-weight:700; color:#B45309; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">Hint ${already + 1} — ${hint.level}</div>
+    <p style="font-size:13px; color:#0F172A; line-height:1.6; margin:0;">${hint.text}</p>
+  `;
+  container.appendChild(el);
+
+  // Update hint button
+  const btn = document.getElementById('hint-btn-' + turnIdx);
+  if (hintsRevealedPerTurn[turnIdx] >= hints.length) {
+    btn.textContent = 'All hints shown';
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  } else {
+    btn.textContent = `Show hint ${hintsRevealedPerTurn[turnIdx] + 1} of ${hints.length}`;
+  }
+
+  // Update hint dots
+  if (hintCount <= 3) {
+    document.getElementById('hdot-' + hintCount).classList.add('used');
+    document.getElementById('hdot-label').textContent = hintCount + ' of 3';
+  }
+
+  document.getElementById('conversation-feed').scrollTop = 99999;
+}
+
+function showStuck(idx) {
+  // Auto-reveal first hint
+  revealHint(idx);
+}
+
+function submitTurn(idx) {
+  const ta = document.getElementById('ta-' + idx);
+  if (ta.value.trim().length < 8) {
+    ta.style.borderColor = '#F43F5E';
+    ta.placeholder = "Please share your thinking — even a rough idea helps Socra guide you.";
+    setTimeout(() => { ta.style.borderColor = '#E2E8F0'; }, 1800);
+    return;
+  }
+
+  // Lock this response
+  const block = document.getElementById('response-block-' + idx);
+  const submitted = ta.value.trim();
+  block.innerHTML = `
+    <div class="student-bubble fade-up" style="position:relative;">
+      <div style="font-size:11px; font-weight:600; color:#475569; margin-bottom:5px;">Your response</div>
+      <div style="font-size:14px; color:#0F172A; line-height:1.6;">${submitted.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    </div>
+  `;
+
+  const turn = TURNS[idx];
+
+  // Advance step if needed
+  if (turn.stepAdvance !== null) {
+    const si = turn.stepAdvance;
+    // Mark current as done
+    const prevCurrent = STEPS.findIndex(s => s.state === 'current');
+    if (prevCurrent >= 0) {
+      STEPS[prevCurrent].state = 'done';
+      const dot = document.getElementById('step-dot-' + prevCurrent);
+      if (dot) { dot.className = 'step-dot done'; }
+      const line = document.getElementById('step-line-' + prevCurrent);
+      if (line) line.className = 'step-line done';
+      const lbl = document.getElementById('step-label-' + prevCurrent);
+      if (lbl) lbl.style.color = '#0D9488';
+      const sub = document.getElementById('step-sub-' + prevCurrent);
+      if (sub) { sub.textContent = 'Demonstrated ✓'; sub.style.color = '#94A3B8'; }
+    }
+    // Mark next as current
+    if (si < STEPS.length) {
+      STEPS[si].state = 'current';
+      const dot = document.getElementById('step-dot-' + si);
+      if (dot) { dot.className = 'step-dot current'; }
+      const lbl = document.getElementById('step-label-' + si);
+      if (lbl) lbl.style.color = '#0F172A';
+      const sub = document.getElementById('step-sub-' + si);
+      if (sub) { sub.textContent = 'Current step'; sub.style.color = '#0D9488'; }
+    }
+  }
+
+  // Add confirmed knowledge tag
+  if (turn.newTag) {
+    const tags = document.getElementById('knowledge-tags');
+    const t = document.createElement('span');
+    t.className = 'knowledge-tag fade-up';
+    t.textContent = turn.newTag;
+    tags.appendChild(t);
+  }
+
+  // Update hypothesis
+  const hypoMap = [
+    null,
+    `"When a is negative the parabola opens downward — the opposite direction from when a is positive."`,
+    `"Sign of a → direction. Size of a → how steep/wide the parabola is."`,
+    `"The sign of a is like a switch: positive = cup shape, negative = dome shape. The size of a controls the steepness."`,
+  ];
+  if (hypoMap[idx + 1]) {
+    document.getElementById('hypothesis-text').innerHTML = hypoMap[idx + 1];
+    document.getElementById('hypothesis-time').textContent = 'Just updated';
+  }
+
+  // Update confidence
+  updateConfidence(turn.confAfter, turn.confLabel);
+
+  // Next turn
+  turnIndex = idx + 1;
+  const feed = document.getElementById('conversation-feed');
+
+  if (turnIndex < TURNS.length) {
+    // Small pause then show next question
+    setTimeout(() => {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'border-top:1px solid #E2E8F0; margin:20px 0;';
+      feed.appendChild(sep);
+      renderSocraCard(turnIndex);
+    }, 600);
+  } else {
+    // Session complete
+    setTimeout(() => {
+      const complete = document.createElement('div');
+      complete.className = 'fade-up';
+      complete.style.cssText = 'text-align:center; padding:32px 20px;';
+      complete.innerHTML = `
+        <div style="width:56px; height:56px; background:#F0FDFA; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; border:2px solid #0D9488;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#0D9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div style="font-size:18px; font-weight:700; color:#0F172A; margin-bottom:6px;">Session complete</div>
+        <div style="font-size:14px; color:#64748B; margin-bottom:20px;">You demonstrated reasoning across all 5 steps. Confidence: <strong style="color:#0D9488;">92%</strong></div>
+        <button class="btn-primary" onclick="goTo('progress')" style="margin:0 auto;">View my progress →</button>
+      `;
+      feed.appendChild(complete);
+      feed.scrollTop = feed.scrollHeight;
+
+      // Mark all steps done
+      STEPS.forEach((s, i) => {
+        s.state = 'done';
+        const dot = document.getElementById('step-dot-' + i);
+        if (dot) dot.className = 'step-dot done';
+        const line = document.getElementById('step-line-' + i);
+        if (line) line.className = 'step-line done';
+        const lbl = document.getElementById('step-label-' + i);
+        if (lbl) lbl.style.color = '#0D9488';
+        const sub = document.getElementById('step-sub-' + i);
+        if (sub) { sub.textContent = 'Demonstrated ✓'; sub.style.color = '#94A3B8'; }
+      });
+      updateConfidence(92, 'Near mastery');
+    }, 600);
+  }
+}
+
+function updateConfidence(pct, label) {
+  document.getElementById('conf-pct').textContent = pct + '%';
+  document.getElementById('conf-label').textContent = label;
+  document.getElementById('conf-bar').style.width = pct + '%';
+  // SVG ring: circumference = 2π×24 ≈ 151, offset = 151 × (1 - pct/100)
+  const offset = Math.round(151 * (1 - pct / 100));
+  document.getElementById('conf-ring').setAttribute('stroke-dashoffset', offset);
+}
+
+// Hypothesis revise button
+function reviseHypothesis() {
+  const box = document.getElementById('hypothesis-box');
+  const current = document.getElementById('hypothesis-text').textContent.replace(/"/g,'');
+  box.innerHTML = `
+    <textarea style="width:100%; border:none; outline:none; font-size:12px; color:#0F172A; line-height:1.5; resize:none; background:transparent; font-family:Inter,sans-serif;" rows="3" id="hypo-edit">${current}</textarea>
+    <div style="display:flex; gap:6px; margin-top:6px;">
+      <button class="btn-primary" style="padding:4px 10px; font-size:11px;" onclick="saveHypothesis()">Save</button>
+      <button class="btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="cancelHypothesis('${current.replace(/'/g,"\\'")}')">Cancel</button>
+    </div>
+  `;
+}
+function saveHypothesis() {
+  const val = document.getElementById('hypo-edit').value.trim();
+  document.getElementById('hypothesis-box').innerHTML = `
+    <div style="font-size:12px; color:#0F172A; line-height:1.5;" id="hypothesis-text">"${val}"</div>
+    <div style="font-size:10px; color:#94A3B8; margin-top:5px;" id="hypothesis-time">Just updated</div>
+  `;
+}
+function cancelHypothesis(old) {
+  document.getElementById('hypothesis-box').innerHTML = `
+    <div style="font-size:12px; color:#0F172A; line-height:1.5;" id="hypothesis-text">"${old}"</div>
+    <div style="font-size:10px; color:#94A3B8; margin-top:5px;" id="hypothesis-time">Updated 3 min ago</div>
+  `;
+}
+
+// ─────────────────────────────────────────────────
+// HEATMAP
+// ─────────────────────────────────────────────────
+const topics = ['Cell Division','Photosynthesis','ATP Synthesis','DNA Replication','Mitosis vs Meiosis'];
+const students = ['Aida','Ben','Cara','Dan','Eva','Finn','Gina','Hana','Ivan','Jake','Kim','Leo','Mia','Noa','Omar'];
+const heatColors = {
+  mastered:'#10B981', building:'#34D399', developing:'#F59E0B',
+  struggling:'#FB923C', misconception:'#F43F5E', notstarted:'#E2E8F0'
+};
+const heatData = [
+  ['mastered','mastered','building','developing','misconception','struggling','mastered','building','notstarted','misconception','developing','mastered','building','mastered','struggling'],
+  ['misconception','developing','struggling','mastered','developing','building','misconception','misconception','struggling','developing','mastered','developing','misconception','building','notstarted'],
+  ['developing','building','developing','developing','struggling','misconception','developing','notstarted','developing','struggling','developing','building','developing','developing','developing'],
+  ['mastered','mastered','mastered','building','mastered','building','developing','mastered','mastered','building','mastered','mastered','mastered','building','developing'],
+  ['building','developing','misconception','building','building','developing','building','developing','developing','misconception','building','building','developing','building','struggling'],
+];
+
+function buildHeatmap() {
+  const container = document.getElementById('heatmap-container');
+  if (!container) return;
+  const table = document.createElement('table');
+  table.style.cssText = 'border-collapse:separate; border-spacing:4px; min-width:500px;';
+
+  // Header row
+  const thead = document.createElement('thead');
+  const hrow = document.createElement('tr');
+  const empty = document.createElement('td');
+  empty.style.width = '140px';
+  hrow.appendChild(empty);
+  students.forEach(s => {
+    const th = document.createElement('td');
+    th.style.cssText = 'font-size:10px; color:#94A3B8; text-align:center; font-weight:500; padding:0 1px;';
+    th.textContent = s.slice(0,3);
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  // Data rows
+  const tbody = document.createElement('tbody');
+  topics.forEach((topic, ti) => {
+    const tr = document.createElement('tr');
+    const tdl = document.createElement('td');
+    tdl.style.cssText = 'font-size:12px; color:#475569; font-weight:500; padding-right:8px; white-space:nowrap;';
+    tdl.textContent = topic;
+    tr.appendChild(tdl);
+    heatData[ti].forEach((state, si) => {
+      const td = document.createElement('td');
+      const cell = document.createElement('div');
+      cell.className = 'heatmap-cell';
+      cell.style.background = heatColors[state];
+      cell.title = `${students[si]} · ${topic}: ${state.replace('notstarted','not started')}`;
+      cell.onclick = () => openDrawer();
+      td.appendChild(cell);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+// ─────────────────────────────────────────────────
+// DRAWER
+// ─────────────────────────────────────────────────
+function openDrawer() {
+  document.getElementById('student-drawer').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('student-drawer').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+// ─────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────
+initConversation();
+buildHeatmap();
+</script>
+</body>
+</html>
