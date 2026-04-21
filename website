@@ -162,6 +162,35 @@
     }
 
     .sparkbar { display: inline-block; width: 6px; border-radius: 2px 2px 0 0; margin: 0 1px; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 12px 16px; background: #F0FDFA;
+      border-left: 3px solid #0D9488; border-radius: 0 10px 10px 0;
+    }
+    .typing-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #0D9488;
+      animation: typingBounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40%           { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* Misconception inline card */
+    .misconception-inline {
+      border-left: 3px solid #F43F5E; background: #FFF1F2;
+      border-radius: 0 10px 10px 0; padding: 14px 16px;
+      animation: fadeUp 0.28s ease forwards;
+    }
   </style>
 </head>
 <body>
@@ -403,7 +432,7 @@
           </div>
         </div>
         <div style="height:3px; background:#E2E8F0; border-radius:2px; margin-top:10px;">
-          <div style="height:3px; background:#0D9488; border-radius:2px; transition:width 0.9s ease;" id="conf-bar" style="width:64%;"></div>
+          <div style="height:3px; background:#0D9488; border-radius:2px; transition:width 0.9s ease; width:64%;" id="conf-bar"></div>
         </div>
         <div style="display:flex; justify-content:space-between; font-size:9px; color:#CBD5E1; margin-top:3px;">
           <span>Starting</span><span>Building</span><span>Mastered</span>
@@ -779,12 +808,14 @@ function renderSocraCard(idx) {
   const turn = TURNS[idx];
   const feed = document.getElementById('conversation-feed');
 
+  // Step number: turns 0-3 map to steps 3-5 (steps 1-2 already done)
+  const stepNum = Math.min(idx + 3, 5);
   // Header label for this turn
   const header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; gap:8px; margin-bottom:14px;';
   header.innerHTML = `
     <span style="font-size:10px; font-weight:700; color:#94A3B8; text-transform:uppercase; letter-spacing:0.7px;">Guided Discovery</span>
-    <span style="font-size:10px; background:#F0FDFA; color:#0D9488; padding:2px 8px; border-radius:20px; border:1px solid #99F6E4;">Step ${turnIndex + 3} of 5</span>
+    <span style="font-size:10px; background:#F0FDFA; color:#0D9488; padding:2px 8px; border-radius:20px; border:1px solid #99F6E4;">Step ${stepNum} of 5</span>
   `;
   feed.appendChild(header);
 
@@ -833,7 +864,25 @@ function renderSocraCard(idx) {
     feed.appendChild(hintSection);
   }
 
+  // Misconception placeholder (injected mid-conversation on turn 0 if triggered)
+  const miscSlot = document.createElement('div');
+  miscSlot.id = 'misc-slot-' + idx;
+  feed.appendChild(miscSlot);
+
   feed.scrollTop = feed.scrollHeight;
+
+  // Wire up Cmd/Ctrl+Enter on the new textarea
+  const ta = document.getElementById('ta-' + idx);
+  if (ta) {
+    ta.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        submitTurn(idx);
+      }
+    });
+    // Auto-focus
+    setTimeout(() => ta.focus(), 50);
+  }
 }
 
 function toggleWhy(btn) {
@@ -908,6 +957,31 @@ function submitTurn(idx) {
 
   const turn = TURNS[idx];
 
+  // Misconception detection — fires before the next question
+  const miscSlot = document.getElementById('misc-slot-' + idx);
+  const lower = submitted.toLowerCase();
+  const misconceptions = [
+    { triggers: ['slope', 'gradient'], msg: 'You used the word "slope" — quadratics don\'t have a single slope. The rate of change itself changes at every point. Want to explore what\'s different before continuing?' },
+    { triggers: ['always', 'never'], msg: 'Watch out for absolute terms like "always" or "never" in math. Can you think of a case that might be an exception?' },
+  ];
+  for (const m of misconceptions) {
+    if (m.triggers.some(t => lower.includes(t)) && miscSlot) {
+      const el = document.createElement('div');
+      el.className = 'misconception-inline';
+      el.style.marginBottom = '14px';
+      el.innerHTML = `
+        <div style="font-size:10px; font-weight:700; color:#F43F5E; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px;">Socra noticed something</div>
+        <p style="font-size:13px; color:#0F172A; line-height:1.6; margin:0 0 10px;">${m.msg}</p>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-ghost" style="padding:5px 11px; font-size:12px;" onclick="this.closest('.misconception-inline').style.opacity='0.5';">I understand</button>
+          <button class="btn-primary" style="padding:5px 11px; font-size:12px;" onclick="this.closest('.misconception-inline').style.opacity='0.5';">Yes, revisit this</button>
+        </div>
+      `;
+      miscSlot.appendChild(el);
+      break;
+    }
+  }
+
   // Advance step if needed
   if (turn.stepAdvance !== null) {
     const si = turn.stepAdvance;
@@ -965,13 +1039,28 @@ function submitTurn(idx) {
   const feed = document.getElementById('conversation-feed');
 
   if (turnIndex < TURNS.length) {
-    // Small pause then show next question
+    // Show typing indicator, then next question
+    const sep = document.createElement('div');
+    sep.style.cssText = 'border-top:1px solid #E2E8F0; margin:20px 0;';
+    feed.appendChild(sep);
+
+    const typing = document.createElement('div');
+    typing.id = 'typing-indicator';
+    typing.style.marginBottom = '16px';
+    typing.innerHTML = `
+      <div style="font-size:10px; font-weight:600; color:#0D9488; margin-bottom:6px;">Socra</div>
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>`;
+    feed.appendChild(typing);
+    feed.scrollTop = feed.scrollHeight;
+
     setTimeout(() => {
-      const sep = document.createElement('div');
-      sep.style.cssText = 'border-top:1px solid #E2E8F0; margin:20px 0;';
-      feed.appendChild(sep);
+      typing.remove();
       renderSocraCard(turnIndex);
-    }, 600);
+    }, 1400);
   } else {
     // Session complete
     setTimeout(() => {
